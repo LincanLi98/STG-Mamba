@@ -33,6 +33,26 @@ This is the official repository of our work `STG-Mamba`, the paper is currently 
 
 ## Model Training/Testing
 
+Using the following commands to Train/Test STG_Mamba model on `KnowAir`, `PEMS04`, `HZ_Metro` respectively. You can also optionally change the model parameters in the file `main.py`.
+
+```bash
+# KnowAir
+python main.py -dataset=know_air -model=STGmamba
+
+```
+
+```bash
+# PEMS04
+python main.py -dataset=pems04 -model=STGmamba
+
+```
+
+```bash
+#HZ_Metro
+python main.py -dataset=hz_metro -model=STGmamba
+```
+
+
 
 
 ## Citation
