@@ -32,7 +32,6 @@ elif args.dataset == 'hz_metro':
 
 
 print("\nPreparing train/test data...")
-#train_dataloader, valid_dataloader, test_dataloader, max_value_speed = PrepareDataset(speed_matrix, BATCH_SIZE=64)
 train_dataloader, valid_dataloader, test_dataloader, max_value = PrepareDataset(speed_matrix, BATCH_SIZE=48)
 
 # models you want to use
