@@ -19,25 +19,35 @@ This is the official repository of our work `STG-Mamba`, the paper is currently 
 - math
 
 ## Project Code Architecture
+```
+/root/STG_Mamba/
+|
+|-- Know_Air_Dataset/
+| |-- knowair_adj_mat.npy
+| |-- knowair_temperature.csv
+|
+|-- PEMS04_Dataset/
+| |-- pems04_adj.npy
+| |-- pems04_flow.csv
+|
+|-- HZ_Metro_Dataset/
+|-- hzmetro_adj.npy
+|-- hzmetro_flow.csv
+|
+|--main.py
+|
+|--modules.py
+|
+|--prepare.py
+|
+|--STGMamba.py
+|
+|--train_STGmamba.py
+|
+|--train_rnn.py
 
-/root/STG_Mamba/  
-              |  
-              |Know_Air_Dataset/  
-              |                |knowair_adj_mat.npy  
-              |                |knowair_temperature.csv  
-              |PEMS04_Dataset/  
-              |              |pems04_adj.npy  
-              |              |pems04_flow.csv  
-              |HZ_Metro_Dataset/  
-              |                |hzmetro_adj.npy  
-              |                |hzmetro_flow.csv  
-              |  
-              |main.py  
-              |modules.py  
-              |prepare.py  
-              |STGMamba.py  
-              |train_STGmamba.py  
-              |train_rnn.py  
+```
+
 
 
 ## Datasets
