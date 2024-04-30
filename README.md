@@ -19,7 +19,7 @@ This is the official repository of our work `STG-Mamba`, the paper is currently 
 - math
 
 ## Project Code Architecture
-```
+
 /root/STG_Mamba/
 |
 |-- Know_Air_Dataset/
@@ -46,7 +46,6 @@ This is the official repository of our work `STG-Mamba`, the paper is currently 
 |
 |--train_rnn.py
 
-```
 
 
 
