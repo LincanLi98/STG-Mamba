@@ -2,7 +2,6 @@
 
 This is the official repository of our work `STG-Mamba`, the paper is currently posted on ArXiV.
 
-❗️❗️This is an Ongoing Project, the full code will be released by Mid May.
 
 
 ## Requirements
@@ -57,19 +56,19 @@ Using the following commands to Train/Test STG_Mamba model on `KnowAir`, `PEMS04
 
 ```bash
 # KnowAir
-python main.py -dataset=know_air -model=STGmamba
+python main.py -dataset=know_air -model=STGmamba -mamba_features=184
 
 ```
 
 ```bash
 # PEMS04
-python main.py -dataset=pems04 -model=STGmamba
+python main.py -dataset=pems04 -model=STGmamba -mamba_features=307
 
 ```
 
 ```bash
 #HZ_Metro
-python main.py -dataset=hz_metro -model=STGmamba
+python main.py -dataset=hz_metro -model=STGmamba -mamba_features=80
 ```
 
 
