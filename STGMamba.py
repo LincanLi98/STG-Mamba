@@ -67,8 +67,8 @@ class KFGN(nn.Module):
         self.fc8 = nn.Linear(hidden_size, 64)
         
     def forward(self, input, Hidden_State=None, Cell_State=None, rHidden_State=None, rCell_State=None):
-        batch_size, time_steps, _ = input.shape  # 假设输入包含时间步
-        if Hidden_State is None: #hidden_size = self.feature_size
+        batch_size, time_steps, _ = input.shape
+        if Hidden_State is None:
             Hidden_State = Variable(torch.zeros(batch_size,self.feature_size).cuda())
         if Cell_State is None:
             Cell_State = Variable(torch.zeros(batch_size,self.feature_size).cuda())
@@ -77,16 +77,13 @@ class KFGN(nn.Module):
         if rCell_State is None:
             rCell_State = Variable(torch.zeros(batch_size,self.feature_size).cuda())
 
-        # 调整状态以包含时间步维度
-        # 如果gc是:[batch_size, time_steps, features]，则需要Hidden_State也是:[batch_size, time_steps, hidden_size]
-        Hidden_State = Hidden_State.unsqueeze(1).expand(-1, time_steps, -1)  # 添加并复制time_steps
+        #[batch_size, time_steps, hidden_size]
+        Hidden_State = Hidden_State.unsqueeze(1).expand(-1, time_steps, -1)
         Cell_State = Cell_State.unsqueeze(1).expand(-1, time_steps, -1)
         rHidden_State = rHidden_State.unsqueeze(1).expand(-1, time_steps, -1)
         rCell_State = rCell_State.unsqueeze(1).expand(-1, time_steps, -1)
             
-            
-            
-        # GC-LSTM
+        
         x = input
         gc = self.gc_list[0](x)
         for i in range(1, self.K):
@@ -127,7 +124,7 @@ class KFGN(nn.Module):
         pred = (Hidden_State * var1 * self.c + rHidden_State * var2) / (var1 + var2 * self.c)
 
         return pred
-        #return Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred
+
 
     def Bi_torch(self, a):
         a[a < 0] = 0
@@ -142,7 +139,7 @@ class KFGN(nn.Module):
             Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred = self.forward(
                 torch.squeeze(inputs[:, i:i + 1, :]), Hidden_State, Cell_State, rHidden_State, rCell_State)
         return pred
-        # return Hidden_State, Cell_State, rHidden_State, rCell_State, pred
+    
 
     def initHidden(self, batch_size):
         use_gpu = torch.cuda.is_available()
@@ -174,7 +171,7 @@ class KFGN(nn.Module):
             rCell_State = Variable(Cell_State_data.cuda(), requires_grad=True)
             return Hidden_State, Cell_State, rHidden_State, rCell_State
 
-# Mamba Network
+# ST-S3M: the Mamba Network
 @dataclass
 class ModelArgs:
     d_model: int
@@ -203,9 +200,9 @@ class KFGN_Mamba(nn.Module):
         self.encode = nn.Linear(args.features, args.d_model)
         self.encoder_layers = nn.ModuleList([ResidualBlock(args) for _ in range(args.n_layer)])
         self.encoder_norm = RMSNorm(args.d_model)
-        # Decoder (identical to Encoder)
-        ##self.decoder_layers = nn.ModuleList([ResidualBlock(args) for _ in range(args.n_layer)]) #if not work, Remove.
-        ##self.decoder_norm = RMSNorm(args.d_model) #if not work, Remove.
+        ########### Decoder (identical to Encoder) ###############
+        #self.decoder_layers = nn.ModuleList([ResidualBlock(args) for _ in range(args.n_layer)]) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
+        #self.decoder_norm = RMSNorm(args.d_model) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
         self.decode = nn.Linear(args.d_model, args.features)
 
     def forward(self, input_ids):
@@ -213,12 +210,12 @@ class KFGN_Mamba(nn.Module):
         for layer in self.encoder_layers:
             x = layer(x)
         x = self.encoder_norm(x)
-        # Decoder
-        ##for layer in self.decoder_layers:#remove
-        ##    x = layer(x) #remove
-        ##x = self.decoder_norm(x) #remove
+        ####### Decoder ##########
+        #for layer in self.decoder_layers:#You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
+        #    x = layer(x) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
+        #x = self.decoder_norm(x) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
         
-        # Decoder Output
+        # Output
         x = self.decode(x)
         
         return x
@@ -238,7 +235,6 @@ class ResidualBlock(nn.Module):
         x1 = self.norm(x)
         x2 = self.kfgn(x1)
         x3 = self.mixer(x2)
-        #output = x3 + x0
         output = x3 + x1
         
         return output
@@ -296,9 +292,8 @@ class MambaBlock(nn.Module):
         (d_in, n) = self.A_log.shape
 
         # Compute ∆ A B C D, the state space parameters.
-        #     A, D are input independent (see Mamba paper [1] Section 3.5.2 "Interpretation of A" for why A isn't selective)
-        #     ∆, B, C are input-dependent (this is a key difference between Mamba and the linear time invariant S4,
-        #                                  and is why Mamba is called **selective** state spaces)
+        #     A, D are input independent
+        #     ∆, B, C are input-dependent
         
         A = -torch.exp(self.A_log.float())  # shape (d_in, n)
         D = self.D.float()
@@ -317,14 +312,14 @@ class MambaBlock(nn.Module):
         (b, l, d_in) = u.shape
         n = A.shape[1]
         
-        # Discretize continuous parameters (A, B)
-        # - A is discretized using zero-order hold (ZOH) discretization (see Section 2 Equation 4 in the Mamba paper [1])
-        # - B is discretized using a simplified Euler discretization instead of ZOH. From a discussion with authors:
-        #   "A is the more important term and the performance doesn't change much with the simplification on B"
+        # Discretize continuous params (A, B)
+        # - A is discretized using zero-order hold (ZOH) discretization
+        # - B is discretized using a simplified Euler discretization instead of ZOH.
+
         deltaA = torch.exp(einsum(delta, A, 'b l d_in, d_in n -> b l d_in n'))
         deltaB_u = einsum(delta, B, u, 'b l d_in, b l n, b l d_in -> b l d_in n')
         
-        # Perform selective scan (see scan_SSM() in The Annotated S4 [2])
+        # Selective Scan
         x = torch.zeros((b, d_in, n), device=deltaA.device)
         ys = []    
         for i in range(l):
