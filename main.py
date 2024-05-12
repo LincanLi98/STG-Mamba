@@ -40,7 +40,6 @@ train_dataloader, valid_dataloader, test_dataloader, max_value = PrepareDataset(
 # models you want to use
 if args.model == 'STGmamba':
     print("\nTraining STGmamba model...")
-    #STGmamba, STGmamba_loss = TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=100)
     STGmamba, STGmamba_loss = TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=100, mamba_features=args.mamba_features)
     print("\nTesting STGmamba model...")
     results = TestSTG_Mamba(STGmamba, test_dataloader, max_value)
