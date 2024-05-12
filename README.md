@@ -1,4 +1,4 @@
-# STG-Mamba: Spatial-Temporal Graph Learning via Selective State Space Model
+# ⛷️STG-Mamba: Spatial-Temporal Graph Learning via Selective State Space Model
 
 The code repository is now available. This is the official repository of our work `STG-Mamba`, the paper is currently posted on ArXiV.
 
