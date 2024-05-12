@@ -10,9 +10,9 @@ from torch.autograd import Variable
 
 
 def TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=1, mamba_features=307):
-    # 'mamba_features=184' if we use Knowair dataset, because there're 184 nodes;
-    # 'mamba_features=307' if we use PEMS04 Dataste, because there're 307 nodes in PEMS04;
-    # 'mamba_features=80' if we use HZ_Metro dataset, because there're 80 nodes; 
+    # 'mamba_features=184' if we use Knowair dataset.
+    # 'mamba_features=307' if we use PEMS04 Dataste,.
+    # 'mamba_features=80' if we use HZ_Metro dataset. 
     inputs, labels = next(iter(train_dataloader))
     [batch_size, step_size, fea_size] = inputs.size()
     input_dim = fea_size
