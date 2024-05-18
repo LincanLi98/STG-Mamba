@@ -76,14 +76,5 @@ python main.py -dataset=hz_metro -model=STGmamba -mamba_features=80
 
 ## Citation
 
-If you find this repository useful in your own research, please cite the following poster paper:
-```
-@misc{li2024stgmamba,
-      title={STG-Mamba: Spatial-Temporal Graph Learning via Selective State Space Model}, 
-      author={Lincan Li and Hanchen Wang and Wenjie Zhang and Adelle Coster},
-      year={2024},
-      eprint={2403.12418},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-}
-```
+If you find this repository useful in your own research, please cite our work.
+
