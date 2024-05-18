@@ -71,7 +71,7 @@ def TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=1, mam
             kfgn_mamba.zero_grad()
 
             labels = torch.squeeze(labels)
-            pred = kfgn_mamba(inputs)  # Updated to use new model directly
+            pred = kfgn_mamba(inputs)  # Updated to use new model
 
             loss_train = loss_MSE(pred, labels)
 
@@ -187,7 +187,7 @@ def TestSTG_Mamba(kfgn_mamba, test_dataloader, max_speed):
 
         tested_batch += 1
 
-        if tested_batch % 1000 == 0:
+        if tested_batch % 100 == 0:
             cur_time = time.time()
             print('Tested #: {}, loss_l1: {}, loss_mse: {}, time: {}'.format(
                 tested_batch * batch_size,
