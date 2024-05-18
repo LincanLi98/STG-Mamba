@@ -305,10 +305,9 @@ class MambaBlock(nn.Module):
     def selective_scan(self, u, delta, A, B, C, D):
         (b, l, d_in) = u.shape
         n = A.shape[1]
-        # This is the new version of Selective Scan Algorithm named as Graph Selective Scan, 
-        #where we use the Feed-Forward graph information from KFGN, and incorporate the Feed-Forward graph information with delta
-        temp_adj = self.kfgn.gc_list[-1].get_transformed_adjacency()
-        
+        # This is the new version of Selective Scan Algorithm named as "Graph Selective Scan"
+        #In Graph Selective Scan, we use the Feed-Forward graph information from KFGN, and incorporate the Feed-Forward information with "delta"
+        temp_adj = self.kfgn.gc_list[-1].get_transformed_adjacency()        
         temp_adj_padded = torch.ones(d_in, d_in, device=temp_adj.device)       
         temp_adj_padded[:temp_adj.size(0), :temp_adj.size(1)] = temp_adj
         
