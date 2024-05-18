@@ -41,12 +41,12 @@ class KFGN(nn.Module):
         self.ol = nn.Linear(gc_input_size + hidden_size, hidden_size)
         self.Cl = nn.Linear(gc_input_size + hidden_size, hidden_size)
 
-        # initialize the neighbor weight for the cell state
+
         self.Neighbor_weight = Parameter(torch.FloatTensor(feature_size))
         stdv = 1. / math.sqrt(feature_size)
         self.Neighbor_weight.data.uniform_(-stdv, stdv)
 
-        # RNN
+
         input_size = self.feature_size
 
         self.rfl = nn.Linear(input_size + hidden_size, hidden_size)
@@ -77,13 +77,11 @@ class KFGN(nn.Module):
         if rCell_State is None:
             rCell_State = Variable(torch.zeros(batch_size,self.feature_size).cuda())
 
-        #[batch_size, time_steps, hidden_size]
         Hidden_State = Hidden_State.unsqueeze(1).expand(-1, time_steps, -1)
         Cell_State = Cell_State.unsqueeze(1).expand(-1, time_steps, -1)
         rHidden_State = rHidden_State.unsqueeze(1).expand(-1, time_steps, -1)
         rCell_State = rCell_State.unsqueeze(1).expand(-1, time_steps, -1)
             
-        
         x = input
         gc = self.gc_list[0](x)
         for i in range(1, self.K):
@@ -124,7 +122,7 @@ class KFGN(nn.Module):
         pred = (Hidden_State * var1 * self.c + rHidden_State * var2) / (var1 + var2 * self.c)
 
         return pred
-
+        #return Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred
 
     def Bi_torch(self, a):
         a[a < 0] = 0
@@ -139,7 +137,7 @@ class KFGN(nn.Module):
             Hidden_State, Cell_State, gc, rHidden_State, rCell_State, pred = self.forward(
                 torch.squeeze(inputs[:, i:i + 1, :]), Hidden_State, Cell_State, rHidden_State, rCell_State)
         return pred
-    
+
 
     def initHidden(self, batch_size):
         use_gpu = torch.cuda.is_available()
@@ -171,7 +169,7 @@ class KFGN(nn.Module):
             rCell_State = Variable(Cell_State_data.cuda(), requires_grad=True)
             return Hidden_State, Cell_State, rHidden_State, rCell_State
 
-# ST-S3M: the Mamba Network
+# Mamba Network
 @dataclass
 class ModelArgs:
     d_model: int
@@ -197,12 +195,13 @@ class KFGN_Mamba(nn.Module):
     def __init__(self, args: ModelArgs):
         super().__init__()
         self.args = args
+        self.kfgn = KFGN(K=args.K, A=args.A, feature_size=args.feature_size)
         self.encode = nn.Linear(args.features, args.d_model)
-        self.encoder_layers = nn.ModuleList([ResidualBlock(args) for _ in range(args.n_layer)])
+        self.encoder_layers = nn.ModuleList([ResidualBlock(args,self.kfgn) for _ in range(args.n_layer)])
         self.encoder_norm = RMSNorm(args.d_model)
-        ########### Decoder (identical to Encoder) ###############
-        #self.decoder_layers = nn.ModuleList([ResidualBlock(args) for _ in range(args.n_layer)]) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
-        #self.decoder_norm = RMSNorm(args.d_model) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
+        # Decoder (identical to Encoder)
+        ##self.decoder_layers = nn.ModuleList([ResidualBlock(args) for _ in range(args.n_layer)]) #You can optionally uncommand these lines to use the identical Decoder.
+        ##self.decoder_norm = RMSNorm(args.d_model) #You can optionally uncommand these lines to use the identical Decoder.
         self.decode = nn.Linear(args.d_model, args.features)
 
     def forward(self, input_ids):
@@ -210,10 +209,10 @@ class KFGN_Mamba(nn.Module):
         for layer in self.encoder_layers:
             x = layer(x)
         x = self.encoder_norm(x)
-        ####### Decoder ##########
-        #for layer in self.decoder_layers:#You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
-        #    x = layer(x) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
-        #x = self.decoder_norm(x) #You can optionally choose to uncommand the decoder part, so that the whole STG-Mamba Network will be Enc-Dec.
+        # Decoder
+        ##for layer in self.decoder_layers:#You can optionally uncommand these lines to use the identical Decoder.
+        ##    x = layer(x) #You can optionally uncommand these lines to use the identical Decoder.
+        ##x = self.decoder_norm(x) #You can optionally uncommand these lines to use the identical Decoder.
         
         # Output
         x = self.decode(x)
@@ -223,11 +222,11 @@ class KFGN_Mamba(nn.Module):
 
 # Residual Block in Mamba Model
 class ResidualBlock(nn.Module):
-    def __init__(self, args: ModelArgs):
+    def __init__(self, args: ModelArgs, kfgn: KFGN):
         super().__init__()
         self.args = args
-        self.kfgn = KFGN(K=args.K, A=args.A, feature_size=args.feature_size)
-        self.mixer = MambaBlock(args)
+        self.kfgn = KFGN(K=args.K, A=args.A, feature_size=args.feature_size)       
+        self.mixer = MambaBlock(args,kfgn)
         self.norm = RMSNorm(args.d_model)
 
     def forward(self, x):
@@ -240,10 +239,11 @@ class ResidualBlock(nn.Module):
         return output
 
 
-class MambaBlock(nn.Module):
-    def __init__(self, args: ModelArgs):
+class MambaBlock(nn.Module):    
+    def __init__(self, args: ModelArgs, kfgn: KFGN):
         super().__init__()
         self.args = args
+        self.kfgn = kfgn
 
         self.in_proj = nn.Linear(args.d_model, args.d_inner * 2, bias=args.bias)
 
@@ -256,10 +256,8 @@ class MambaBlock(nn.Module):
             padding=args.d_conv - 1,
         )
 
-        # x_proj takes in `x` and outputs the input-specific Δ, B, C
         self.x_proj = nn.Linear(args.d_inner, args.dt_rank + args.d_state * 2, bias=False)
         
-        # dt_proj projects Δ from dt_rank to d_in
         self.dt_proj = nn.Linear(args.dt_rank, args.d_inner, bias=True)
 
         A = repeat(torch.arange(1, args.d_state + 1), 'n -> d n', d=args.d_inner)
@@ -271,7 +269,7 @@ class MambaBlock(nn.Module):
     def forward(self, x):
         (b, l, d) = x.shape
         
-        x_and_res = self.in_proj(x)  # shape (b, l, 2 * d_in)
+        x_and_res = self.in_proj(x)
         (x, res) = x_and_res.split(split_size=[self.args.d_inner, self.args.d_inner], dim=-1)
 
         x = rearrange(x, 'b l d_in -> b d_in l')
@@ -290,20 +288,16 @@ class MambaBlock(nn.Module):
 
     def ssm(self, x):
         (d_in, n) = self.A_log.shape
-
-        # Compute ∆ A B C D, the state space parameters.
-        #     A, D are input independent
-        #     ∆, B, C are input-dependent
-        
-        A = -torch.exp(self.A_log.float())  # shape (d_in, n)
+    
+        A = -torch.exp(self.A_log.float())
         D = self.D.float()
 
-        x_dbl = self.x_proj(x)  # (b, l, dt_rank + 2*n)
+        x_dbl = self.x_proj(x)
         
-        (delta, B, C) = x_dbl.split(split_size=[self.args.dt_rank, n, n], dim=-1)  # delta: (b, l, dt_rank). B, C: (b, l, n)
+        (delta, B, C) = x_dbl.split(split_size=[self.args.dt_rank, n, n], dim=-1)
         delta = F.softplus(self.dt_proj(delta))  # (b, l, d_in)
         
-        y = self.selective_scan(x, delta, A, B, C, D)  # This is similar to run_SSM(A, B, C, u) in The Annotated S4 [2]
+        y = self.selective_scan(x, delta, A, B, C, D)
         
         return y
 
@@ -311,15 +305,19 @@ class MambaBlock(nn.Module):
     def selective_scan(self, u, delta, A, B, C, D):
         (b, l, d_in) = u.shape
         n = A.shape[1]
+        # This is the new version of Selective Scan Algorithm named as Graph Selective Scan, 
+        #where we use the Feed-Forward graph information from KFGN, and incorporate the Feed-Forward graph information with delta
+        temp_adj = self.kfgn.gc_list[-1].get_transformed_adjacency()
         
-        # Discretize continuous params (A, B)
-        # - A is discretized using zero-order hold (ZOH) discretization
-        # - B is discretized using a simplified Euler discretization instead of ZOH.
-
-        deltaA = torch.exp(einsum(delta, A, 'b l d_in, d_in n -> b l d_in n'))
-        deltaB_u = einsum(delta, B, u, 'b l d_in, b l n, b l d_in -> b l d_in n')
+        temp_adj_padded = torch.ones(d_in, d_in, device=temp_adj.device)       
+        temp_adj_padded[:temp_adj.size(0), :temp_adj.size(1)] = temp_adj
         
-        # Selective Scan
+        delta_p = torch.matmul(delta,temp_adj_padded)
+        
+        # The fused param delta_p will participate in the following upgrading of deltaA and deltaB_u
+        deltaA = torch.exp(einsum(delta_p, A, 'b l d_in, d_in n -> b l d_in n'))
+        deltaB_u = einsum(delta_p, B, u, 'b l d_in, b l n, b l d_in -> b l d_in n')
+        
         x = torch.zeros((b, d_in, n), device=deltaA.device)
         ys = []    
         for i in range(l):
