@@ -39,8 +39,17 @@ class DynamicFilterGNN(nn.Module):
     def forward(self, input):
         transformed_filter = self.transform(self.base_filter)
         transformed_adjacency = 0.9*self.filter_adjacency_matrix+0.1*transformed_filter
-        return F.linear(input, transformed_adjacency.matmul(self.weight), self.bias)
+        result_embed = F.linear(input, transformed_adjacency.matmul(self.weight), self.bias)
+        #F.linear(input, transformed_adjacency.matmul(self.weight), self.bias)
+        return result_embed
 
+    
+    def get_transformed_adjacency(self):
+        transformed_filter = self.transform(self.base_filter)
+        transformed_adjacency = 0.9 * self.filter_adjacency_matrix + 0.1 * transformed_filter
+        return transformed_adjacency
+    
+    
     def __repr__(self):
         return self.__class__.__name__ + '(' \
                + 'in_features=' + str(self.in_features) \
