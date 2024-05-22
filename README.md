@@ -48,7 +48,9 @@ The code repository is now available. This is the official repository of our wor
 
 (3) HZ-Metro: `HZ-Metro` is an open-sourced Metro Crowd-Flow dataset collected from 80 Metro Stations in HangZhou, China. You can find the raw data at [here](https://github.com/HCPLab-SYSU/PVCGN). Also, there is a [reference link](https://github.com/skyzh/Meteor/blob/master/station_line.csv) of the 80 Metro Stations' ID and their Name in real-world.
 
+## Model Architecture
 
+![STG-Mamba Architecture](Figures/Figure1-STG-Mamba-Structure.png)
 
 ## Model Training/Testing
 
