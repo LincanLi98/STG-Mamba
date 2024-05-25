@@ -4,15 +4,15 @@ import math
 import pandas as pd
 import torch
 import torch.optim as optim
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from STGMamba import *
-
 from torch.autograd import Variable
 
 
 def TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=1, mamba_features=307):
-    # 'mamba_features=184' if we use Knowair dataset.
-    # 'mamba_features=307' if we use PEMS04 Dataste,.
-    # 'mamba_features=80' if we use HZ_Metro dataset. 
+    # 'mamba_features=184' if we use Knowair dataset;
+    # 'mamba_features=307' if we use PEMS04 datastet;
+    # 'mamba_features=80' if we use HZ_Metro dataset; 
     inputs, labels = next(iter(train_dataloader))
     [batch_size, step_size, fea_size] = inputs.size()
     input_dim = fea_size
@@ -36,6 +36,7 @@ def TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=1, mam
 
     learning_rate = 1e-4
     optimizer = optim.AdamW(kfgn_mamba.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01, amsgrad=False)
+    scheduler = CosineAnnealingLR(optimizer, T_max=50, eta_min=1e-5)
 
     use_gpu = torch.cuda.is_available()
 
@@ -71,13 +72,15 @@ def TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=1, mam
             kfgn_mamba.zero_grad()
 
             labels = torch.squeeze(labels)
-            pred = kfgn_mamba(inputs)  # Updated to use new model
+            pred = kfgn_mamba(inputs)  # Updated to use new model directly
 
             loss_train = loss_MSE(pred, labels)
 
             optimizer.zero_grad()
             loss_train.backward()
             optimizer.step()
+            # Update learning rate by CosineAnnealingLR
+            scheduler.step()
 
             losses_train.append(loss_train.data)
 
@@ -118,6 +121,7 @@ def TrainSTG_Mamba(train_dataloader, valid_dataloader, A, K=3, num_epochs=1, mam
         losses_epoch.append(loss_epoch)
 
     return kfgn_mamba, [losses_train, losses_interval_train, losses_valid, losses_interval_valid]
+
 
 
 def TestSTG_Mamba(kfgn_mamba, test_dataloader, max_speed):
